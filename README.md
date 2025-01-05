@@ -1,106 +1,90 @@
-# Secure Sharing App
+# Secure File Sharing System
 
-This is a FastAPI-based web application for secure file sharing and basic arithmetic operations. The project includes user registration, login with JWT token authentication, and file upload functionality.
+This project implements a secure file-sharing system using Flask, SQLAlchemy, and JWT for user authentication and file management. The system allows two types of users: **Ops Users** and **Client Users**. Ops users can upload files, while client users can sign up, verify their email, and download files securely.
 
 ## Features
 
-### User Management:
-- User registration with hashed password storage.
-- JWT-based user authentication.
+- **Ops User:**
+  - Can upload files (`pptx`, `docx`, `xlsx`) securely.
+  - File uploads are restricted to specific file types.
+- **Client User:**
+  - Can sign up and receive a verification email.
+  - Can log in only after email verification.
+  - Can list and download files securely using a tokenized URL.
+- **Security:**
+  - JWT-based authentication for secure API access.
+  - Tokenized download URLs for secure file downloads, which are validated for the correct user.
 
-### File Upload:
-- Upload and store files securely in a designated directory.
+## Technologies Used
 
-### Arithmetic Operations:
-- Addition and multiplication of two numbers.
-
-## Project Structure
-
-```
-.
-├── app.py          # Main FastAPI application
-├── models.py       # Pydantic models for user handling
-├── utils.py        # Utility functions for password hashing and JWT
-├── test_app.py     # Test cases using Pytest
-├── requirements.txt # Project dependencies
-├── README.md       # Project documentation
-└── files/          # Directory to store uploaded files
-```
+- **Flask:** A lightweight WSGI web application framework.
+- **Flask-SQLAlchemy:** For database interaction.
+- **Flask-JWT-Extended:** For user authentication via JWT tokens.
+- **Flask-Mail:** To send verification emails.
+- **Flask-Uploads:** To handle file uploads.
+- **SQLite:** A lightweight relational database used for development (replaceable with other databases).
+- **Werkzeug:** For secure file handling.
 
 ## Installation
 
-1. Clone the repository:
-```bash
-git clone <repository_url>
-cd secure_sharing
+### Clone the Repository
+```
+git clone https://github.com/your-username/secure-file-sharing.git
+cd secure-file-sharing
 ```
 
-2. Create a virtual environment:
+### 2. Set Up a Virtual Environment
 ```bash
-python -m venv secure_sharing
+python -m venv venv
+source venv/bin/activate  # On Windows use `venv\Scripts\activate`
 ```
 
-3. Activate the virtual environment:
-
-**On Windows:**
-```bash
-.\secure_sharing\Scripts\activate
+### 3. Install Dependencies
 ```
-
-**On Mac/Linux:**
-```bash
-source secure_sharing/bin/activate
-```
-
-4. Install dependencies:
-```bash
 pip install -r requirements.txt
 ```
 
-## Running the Application
-
-```bash
-uvicorn app:app --reload
+### 4. Configure Environment Variables
 ```
-The app will be accessible at: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+SECRET_KEY=your_secret_key
+DATABASE_URL=sqlite:///path_to_your_database.db
+JWT_SECRET_KEY=your_jwt_secret_key
+MAIL_SERVER=smtp.yourmailserver.com
+MAIL_PORT=587
+MAIL_USE_TLS=True
+MAIL_USERNAME=your_email@example.com
+MAIL_PASSWORD=your_email_password
+```
+
+### 5. Initialize the Database
+```
+python app.py
+```
+
+### 6. Run the Application
+```
+python app.py
+```
 
 ## API Endpoints
 
-### Health Check
-- `GET /` : Root endpoint
-- `GET /health` : Check application health
+### User Operations
+- `POST /signup`: Create a new user and send a verification email.
+- `GET /verify/<token>`: Verify the user’s email using the token received in the verification email.
+- `POST /login`: Log in the user and return a JWT access token.
+- `GET /user`: Retrieve the current user’s information (requires JWT authentication).
 
-### User Management
-- `POST /users/` : Register a new user
+### File Operations (For Ops Users Only)
+- `POST /files`: Upload a file (only pptx, docx, xlsx).
+- `GET /files`: List all files uploaded by the authenticated Ops user.
 
-Example Request Body:
-```json
-{
-   "username": "test_user",
-   "email": "user@example.com",
-   "password": "password123"
-}
-```
+### File Download (For Client Users Only)
+- `GET /download-file/<file_id>`: Generate a secure download link for a file.
+- `GET /download/<file_id>/<token>`: Download the file securely using the generated download token.
 
-- `POST /login/` : Login user and get JWT token
+### File Upload Restrictions
+- Ops users can upload files of type pptx, docx, and xlsx only.
+- Files are saved securely and are only accessible by the user who uploaded them.
 
-Example Request Body:
-```json
-{
-   "username": "test_user",
-   "password": "password123"
-}
-```
-
-### File Upload
-- `POST /uploadfile/` : Upload a file
-  - Form Data: `file`
-
-### Arithmetic Operations
-- `GET /add/{a}/{b}` : Add two numbers
-- `GET /multiply/{a}/{b}` : Multiply two numbers
-
-## Running Tests
-Pytest is used for testing the application:
-```bash
-pytest test_app.py
+### Testing
+You can use tools like Postman or cURL to test the APIs.
