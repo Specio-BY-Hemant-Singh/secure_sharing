@@ -1,0 +1,9 @@
+fastapi
+pydantic
+passlib
+python-jose
+httpx
+pytest
+anyio
+bcrypt
+uvicorn
