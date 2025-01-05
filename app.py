@@ -1,59 +1,43 @@
-from fastapi import FastAPI, HTTPException, File, UploadFile
-from models import UserCreate, UserLogin
-from utils import hash_password, verify_password, create_access_token
+from flask import Flask
+from flask_restful import Api
+from flask_sqlalchemy import SQLAlchemy
+from flask_jwt_extended import JWTManager
+from flask_mail import Mail
+from flask_uploads import UploadSet, configure_uploads, DOCUMENTS
+from file_sharing.config import Config
+from file_sharing.resources.auth import SignUpResource, VerifyEmailResource, LoginResource
+from file_sharing.resources.user import UserResource
+from file_sharing.resources.files import FileResource, DownloadFileResource, SecureDownloadResource
+from file_sharing.models import db
 import os
-from utils import hash_password
 
+# Initialize the app
+app = Flask(__name__)
+app.config.from_object(Config)
 
-app = FastAPI()
+# Initialize extensions
+db.init_app(app)
+jwt = JWTManager(app)
+mail = Mail(app)
 
-# Root endpoint
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to the Secure Sharing App!"}
+# Configure file uploads
+documents = UploadSet('documents', DOCUMENTS)
+app.config['UPLOADED_DOCUMENTS_DEST'] = app.config['UPLOAD_FOLDER']
+configure_uploads(app, documents)
 
-# Health check route
-@app.get("/health")
-def health_check():
-    return {"status": "OK"}
+# Initialize API
+api = Api(app)
+api.add_resource(SignUpResource, '/signup')
+api.add_resource(VerifyEmailResource, '/verify/<string:token>')
+api.add_resource(LoginResource, '/login')
+api.add_resource(UserResource, '/user')
+api.add_resource(FileResource, '/files')
+api.add_resource(DownloadFileResource, '/download-file/<int:file_id>')
+api.add_resource(SecureDownloadResource, '/download/<int:file_id>/<string:token>')
 
-# Route to create a new user
-@app.post("/users/")
-def create_user(user: UserCreate):
-    # Here, simulate saving the user data (you should connect to a database in a real app)
-    hashed_password = hash_password(user.password)
-    # Simulate saving the user with hashed password (in actual app, save it to the database)
-    return {"message": f"User {user.username} created successfully!"}
+# Database creation (Use migrations in production)
+with app.app_context():
+    db.create_all()
 
-# Generate a properly hashed password for testing
-hashed_password = hash_password("testpassword")
-# Route to handle user login
-@app.post("/login/")
-def login_user(user: UserLogin):
-    if user.username == "test_user" and verify_password(user.password, hashed_password):
-        token = create_access_token(data={"sub": user.username})
-        return {"message": f"User {user.username} logged in successfully!", "access_token": token}
-    else:
-        raise HTTPException(status_code=400, detail="Invalid credentials")
-
-# Route to upload a file
-@app.post("/uploadfile/")
-async def upload_file(file: UploadFile = File(...)):
-    # Ensure the 'files' directory exists
-    os.makedirs("files", exist_ok=True)
-    
-    file_location = f"files/{file.filename}"
-    with open(file_location, "wb") as f:
-        f.write(file.file.read())
-    
-    return {"info": f"File '{file.filename}' saved at '{file_location}'"}
-
-# Simple route for addition
-@app.get("/add/{a}/{b}")
-def add(a: int, b: int):
-    return {"result": a + b}
-
-# Simple route for multiplication
-@app.get("/multiply/{a}/{b}")
-def multiply(a: int, b: int):
-    return {"result": a * b}
+if __name__ == '__main__':
+    app.run(debug=True)
