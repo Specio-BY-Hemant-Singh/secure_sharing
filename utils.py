@@ -1,35 +1,16 @@
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from datetime import datetime, timedelta
+from .config import Config
+from flask import request, url_for
+from werkzeug.utils import secure_filename
+from .models import User
+import os
 
-# Set up password context (using bcrypt for hashing passwords)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in Config.ALLOWED_EXTENSIONS
 
-# Secret key for JWT encoding/decoding
-SECRET_KEY = "mysecretkey"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+def generate_secure_url(file_id, token):
+    return url_for('secure_download_resource', file_id=file_id, token=token, _external=True)
 
-# Function to hash a password
-def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
-
-# Function to verify a password
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
-# Function to create a JWT token
-def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + expires_delta
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
-# Function to verify the JWT token (for authentication)
-def verify_token(token: str):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
-    except JWTError:
-        return None
+def get_current_user():
+    from flask_jwt_extended import get_jwt_identity
+    user_id = get_jwt_identity()
+    return User.query.get(user_id)
