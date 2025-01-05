@@ -1,80 +1,120 @@
+
+from app import app, db
+from models import User, File
+from flask_jwt_extended import create_access_token
 import pytest
-from fastapi.testclient import TestClient
-from app import app
 
-# Initialize the TestClient with the FastAPI app
-client = TestClient(app)
+if __name__ == '__main__':
+    pytest.main([__file__])
+data = {
+    "username": "testuser",
+    "email": "testuser@example.com",
+    "password": "password123"
+}
 
-# Test the root endpoint
-def test_read_root():
-    response = client.get("/")
+@pytest.fixture
+def client():
+    app.config['TESTING'] = True
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    with app.app_context():
+        db.create_all()
+    client = app.test_client()
+    yield client
+    with app.app_context():
+        db.session.remove()
+        db.drop_all()
+
+@pytest.fixture
+def ops_user():
+    user = User(username="ops_user", email="ops@example.com", is_ops_user=True)
+    user.set_password("password123")
+    db.session.add(user)
+    db.session.commit()
+    return user
+
+@pytest.fixture
+def client_user():
+    user = User(username="client_user", email="client@example.com")
+    user.set_password("password123")
+    user.email_verified = True
+    db.session.add(user)
+    db.session.commit()
+    return user
+
+@pytest.fixture
+def access_token(client_user):
+    return create_access_token(identity=client_user.id)
+
+# Test User Registration
+def test_signup(client):
+    response = client.post('/signup', json=data)
+    assert response.status_code == 201
+    assert b"User created successfully" in response.data
+
+# Test User Login
+def test_login(client, client_user):
+    response = client.post('/login', json={
+        "username": client_user.username,
+        "password": "password123"
+    })
     assert response.status_code == 200
-    assert response.json() == {"message": "Welcome to the Secure Sharing App!"}
+    assert 'access_token' in response.get_json()
 
-# Test the health check route
-def test_health_check():
-    response = client.get("/health")
+# Test Unauthorized File Upload
+def test_upload_file_unauthorized(client, access_token):
+    response = client.post('/files', headers={
+        'Authorization': f'Bearer {access_token}'
+    }, data={
+        'file': (open('tests/sample.docx', 'rb'), 'sample.docx')
+    })
+    assert response.status_code == 403
+    assert b"Only Ops users can upload files" in response.data
+
+# Test Authorized File Upload
+def test_upload_file_authorized(client, ops_user):
+    token = create_access_token(identity=ops_user.id)
+    response = client.post('/files', headers={
+        'Authorization': f'Bearer {token}'
+    }, data={
+        'file': (open('tests/sample.docx', 'rb'), 'sample.docx')
+    })
+    assert response.status_code == 201
+
+# Test File Listing
+def test_list_files(client, access_token):
+    response = client.get('/files', headers={
+        'Authorization': f'Bearer {access_token}'
+    })
     assert response.status_code == 200
-    assert response.json() == {"status": "OK"}
 
-# Test user creation
-def test_create_user():
-    # Create a sample user data to test the user creation
-    user_data = {
-        "username": "test_user",
-        "email": "test_user@example.com",
-        "password": "testpassword"
-    }
-    
-    response = client.post("/users/", json=user_data)
+# Test Secure File Download Link Generation
+def test_download_file_link(client, ops_user):
+    token = create_access_token(identity=ops_user.id)
+    file = File(filename="sample.docx", user_id=ops_user.id)
+    db.session.add(file)
+    db.session.commit()
+
+    response = client.get(f'/download-file/{file.id}', headers={
+        'Authorization': f'Bearer {token}'
+    })
     assert response.status_code == 200
-    assert response.json() == {"message": "User test_user created successfully!"}
+    assert 'download-link' in response.get_json()
 
-# Test user login with correct credentials
-def test_login_user():
-    # Create a login payload for a test user
-    login_data = {
-        "username": "test_user",
-        "password": "testpassword"
-    }
-    
-    response = client.post("/login/", json=login_data)
+# Test Secure File Download
+def test_secure_file_download(client, ops_user):
+    token = create_access_token(identity=ops_user.id)
+    file = File(filename="sample.docx", user_id=ops_user.id)
+    file.download_token = "valid_token"
+    db.session.add(file)
+    db.session.commit()
+
+    response = client.get(f'/download/{file.id}/valid_token')
     assert response.status_code == 200
-    assert "access_token" in response.json()
-    assert response.json()["message"] == "User test_user logged in successfully!"
+    assert b"PK" in response.data  # Checking for binary file content marker
 
-# Test user login with incorrect credentials
-def test_login_invalid_user():
-    login_data = {
-        "username": "test_user",
-        "password": "wrongpassword"
-    }
-    
-    response = client.post("/login/", json=login_data)
-    assert response.status_code == 400
-    assert response.json() == {"detail": "Invalid credentials"}
+# Test Invalid Download Token
+def test_invalid_download_token(client):
+    response = client.get('/download/1/invalid_token')
+    assert response.status_code == 403
+    assert b"Invalid download token" in response.data
 
-# Test the file upload functionality
-def test_upload_file():
-    # Simulate file upload using TestClient's `files` parameter
-    with open("testfile.txt", "w") as f:
-        f.write("This is a test file content.")
-    
-    with open("testfile.txt", "rb") as file:
-        response = client.post("/uploadfile/", files={"file": ("testfile.txt", file, "text/plain")})
-    
-    assert response.status_code == 200
-    assert "info" in response.json()
-    assert "saved at" in response.json()["info"]
-
-# Test simple addition
-def test_addition():
-    response = client.get("/add/3/5")
-    assert response.status_code == 200
-    assert response.json() == {"result": 8}
-
-# Test simple multiplication
-def test_multiplication():
-    response = client.get("/multiply/3/5")
-    assert response.status_code == 200
-    assert response.json() == {"result": 15}
