@@ -29,7 +29,7 @@ This project implements a secure file-sharing system using Flask, SQLAlchemy, an
 
 ### Clone the Repository
 ```
-git clone https://github.com/your-username/secure-file-sharing.git
+git clone https://github.com/Specio-BY-Hemant-Singh/secure_sharing.git
 cd secure-file-sharing
 ```
 
