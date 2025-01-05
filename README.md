@@ -1,25 +1,22 @@
-Secure Sharing App
+# Secure Sharing App
 
 This is a FastAPI-based web application for secure file sharing and basic arithmetic operations. The project includes user registration, login with JWT token authentication, and file upload functionality.
 
-Features
+## Features
 
-User Management:
+### User Management:
+- User registration with hashed password storage.
+- JWT-based user authentication.
 
-User registration with hashed password storage.
+### File Upload:
+- Upload and store files securely in a designated directory.
 
-JWT-based user authentication.
+### Arithmetic Operations:
+- Addition and multiplication of two numbers.
 
-File Upload:
+## Project Structure
 
-Upload and store files securely in a designated directory.
-
-Arithmetic Operations:
-
-Addition and multiplication of two numbers.
-
-Project Structure
-
+```
 .
 ├── app.py          # Main FastAPI application
 ├── models.py       # Pydantic models for user handling
@@ -28,78 +25,82 @@ Project Structure
 ├── requirements.txt # Project dependencies
 ├── README.md       # Project documentation
 └── files/          # Directory to store uploaded files
+```
 
-Installation
+## Installation
 
-Clone the repository:
-
+1. Clone the repository:
+```bash
 git clone <repository_url>
 cd secure_sharing
+```
 
-Create a virtual environment:
-
+2. Create a virtual environment:
+```bash
 python -m venv secure_sharing
+```
 
-Activate the virtual environment:
+3. Activate the virtual environment:
 
-On Windows:
-
+**On Windows:**
+```bash
 .\secure_sharing\Scripts\activate
+```
 
-On Mac/Linux:
-
+**On Mac/Linux:**
+```bash
 source secure_sharing/bin/activate
+```
 
-Install dependencies:
-
+4. Install dependencies:
+```bash
 pip install -r requirements.txt
+```
 
-Running the Application
+## Running the Application
 
+```bash
 uvicorn app:app --reload
+```
+The app will be accessible at: [http://127.0.0.1:8000](http://127.0.0.1:8000)
 
-The app will be accessible at: http://127.0.0.1:8000
+## API Endpoints
 
-API Endpoints
+### Health Check
+- `GET /` : Root endpoint
+- `GET /health` : Check application health
 
-Health Check
+### User Management
+- `POST /users/` : Register a new user
 
-GET / : Root endpoint
-
-GET /health : Check application health
-
-User Management
-
-POST /users/ : Register a new user
-
+Example Request Body:
+```json
 {
    "username": "test_user",
    "email": "user@example.com",
    "password": "password123"
 }
+```
 
-POST /login/ : Login user and get JWT token
+- `POST /login/` : Login user and get JWT token
 
+Example Request Body:
+```json
 {
    "username": "test_user",
    "password": "password123"
 }
+```
 
-File Upload
+### File Upload
+- `POST /uploadfile/` : Upload a file
+  - Form Data: `file`
 
-POST /uploadfile/ : Upload a file
+### Arithmetic Operations
+- `GET /add/{a}/{b}` : Add two numbers
+- `GET /multiply/{a}/{b}` : Multiply two numbers
 
-Form Data: file
-
-Arithmetic Operations
-
-GET /add/{a}/{b} : Add two numbers
-
-GET /multiply/{a}/{b} : Multiply two numbers
-
-Running Tests
-
+## Running Tests
 Pytest is used for testing the application:
-
+```bash
 pytest test_app.py
-
